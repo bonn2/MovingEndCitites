@@ -1,0 +1,12 @@
+name: MovingEndCities
+version: @version@
+main: bonn2.movingendcities.Main
+api-version: 1.13
+depend: [
+  -WorldEdit
+]
+commands:
+  newcity:
+    usage: /newcity <name>
+  removecity:
+    usage: /removecity <name>
