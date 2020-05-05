@@ -16,6 +16,7 @@ import com.sk89q.worldedit.regions.Region;
 import com.sk89q.worldedit.session.ClipboardHolder;
 import org.bukkit.*;
 import org.bukkit.block.Biome;
+import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -24,9 +25,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.*;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Random;
+import java.util.*;
 
 public class EndCityManager {
 
@@ -187,44 +186,65 @@ public class EndCityManager {
 
         savePrePasteLocation(destination, clipboard, name);
 
-        try (EditSession editSession = WorldEdit.getInstance().getEditSessionFactory().getEditSession(new BukkitWorld(destination.getWorld()), -1)) {
-            Operation operation = new ClipboardHolder(clipboard)
-                    .createPaste(editSession)
-                    .to(BlockVector3.at(destination.getX(), destination.getY() + 1, destination.getZ()))
-                    .ignoreAirBlocks(true)
-                    .build();
-            Operations.complete(operation);
-        } catch (WorldEditException e) {
-            e.printStackTrace();
-            return;
-        }
-        Date createdDate = new Date();
+        new BukkitRunnable() {
+
+            @Override
+            public void run() {
+                try (EditSession editSession = WorldEdit.getInstance().getEditSessionFactory().getEditSession(new BukkitWorld(destination.getWorld()), -1)) {
+                    Operation operation = new ClipboardHolder(clipboard)
+                            .createPaste(editSession)
+                            .to(BlockVector3.at(destination.getX(), destination.getY() + 1, destination.getZ()))
+                            .ignoreAirBlocks(true)
+                            .build();
+                    Operations.complete(operation);
+                } catch (WorldEditException e) {
+                    e.printStackTrace();
+                    return;
+                }
+                Date createdDate = new Date();
+                File endcityYml = new File(plugin.getDataFolder() + File.separator + "cities.yml");
+                YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
+                yml.set(name + ".CreatedDate", createdDate);
+                Chunk minChunk = yml.getLocation(name + ".MinLocation").getChunk();
+                Chunk maxChunk = yml.getLocation(name + ".MaxLocation").getChunk();
+                try {
+                    yml.save(endcityYml);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                Random rand = new Random();
+                for(int cx = minChunk.getX(); cx <= maxChunk.getX(); cx++) {
+                    for (int cz = minChunk.getZ(); cz <= maxChunk.getZ(); cz++) {
+                        Chunk currentChunk = minChunk.getWorld().getChunkAt(cx, cz);
+                        for (BlockState tileEntity : currentChunk.getTileEntities()) {
+                            if (tileEntity instanceof Chest) {
+                                Chest chest = (Chest) tileEntity;
+                                chest.setSeed(rand.nextLong());
+                                tileEntity.update(true);
+                            }
+                        }
+                    }
+                }
+                Main.pasting = false;
+                Location location = yml.getLocation(name + ".MaxLocation");
+                plugin.getLogger().info("Pasted city " + name + " at (" + location.getX() + " " + location.getY() + " " + location.getZ() + ")");
+            }
+
+        }.runTaskLater(plugin, 100);
+    }
+
+
+
+    public static void deleteCity(String name) {
+        Main plugin = Main.plugin;
         File endcityYml = new File(plugin.getDataFolder() + File.separator + "cities.yml");
         YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
-        yml.set(name + ".CreatedDate", createdDate);
-        Chunk minChunk = yml.getLocation(name + ".MinLocation").getChunk();
-        Chunk maxChunk = yml.getLocation(name + ".MaxLocation").getChunk();
+        yml.set(name, null);
         try {
             yml.save(endcityYml);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Random rand = new Random();
-        for(int cx = minChunk.getX(); cx <= maxChunk.getX(); cx++) {
-            for (int cz = minChunk.getZ(); cz <= maxChunk.getZ(); cz++) {
-                Chunk currentChunk = minChunk.getWorld().getChunkAt(cx, cz);
-                for (BlockState tileEntity : currentChunk.getTileEntities()) {
-                    if (tileEntity instanceof Chest) {
-                        Chest chest = (Chest) tileEntity;
-                        chest.setSeed(rand.nextLong());
-                        tileEntity.update(true);
-                    }
-                }
-            }
-        }
-        Main.pasting = false;
-        Location location = yml.getLocation(name + ".MaxLocation");
-        plugin.getLogger().info("Pasted city " + name + " at (" + location.getX() + " " + location.getY() + " " + location.getZ() + ")");
     }
 
     public static boolean removeCity(String name) {
@@ -244,6 +264,24 @@ public class EndCityManager {
         Region region = new CuboidRegion(new BukkitWorld(pasteLocation.getWorld()), minLocation, maxLocation);
         Location centerLoc = new Location(Bukkit.getWorld(worldName), region.getCenter().getX(), region.getCenter().getY(),region.getCenter().getZ());
 
+        List<Material> keepList = new ArrayList<>();
+        keepList.add(Material.VOID_AIR);
+        keepList.add(Material.AIR);
+        keepList.add(Material.CAVE_AIR);
+        keepList.add(Material.END_STONE);
+        keepList.add(Material.CHORUS_FLOWER);
+        keepList.add(Material.CHORUS_PLANT);
+        for (int x = 0; x < region.getWidth(); x++) {
+            for (int z = 0; z < region.getLength(); z++) {
+                for (int y = 0; y < region.getHeight(); y++) {
+                    Block block = pasteLocation.getWorld().getBlockAt(x + minLocation.getX(), y + minLocation.getY(), z + minLocation.getZ());
+                    if (!keepList.contains(block.getType())) {
+                        block.setType(Material.AIR);
+                    }
+                }
+            }
+        }
+
         File file = new File(plugin.getDataFolder() + File.separator + "undos" + File.separator + name + ".schem");
         Clipboard clipboard = null;
 
@@ -257,6 +295,7 @@ public class EndCityManager {
         try (EditSession editSession = WorldEdit.getInstance().getEditSessionFactory().getEditSession(new BukkitWorld(pasteLocation.getWorld()), -1)) {
             Operation operation = new ClipboardHolder(clipboard)
                     .createPaste(editSession)
+                    .ignoreAirBlocks(true)
                     .to(BlockVector3.at(pasteLocation.getX(), pasteLocation.getY(), pasteLocation.getZ()))
                     // configure here
                     .build();
