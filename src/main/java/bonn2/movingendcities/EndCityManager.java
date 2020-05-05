@@ -21,6 +21,7 @@ import org.bukkit.block.Chest;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.*;
 import java.util.Collection;
@@ -30,6 +31,7 @@ import java.util.Random;
 public class EndCityManager {
 
     private static Location getEndCityLocation(World world) {
+        Main plugin = Main.plugin;
         WorldBorder worldBorder = world.getWorldBorder();
         Location center = worldBorder.getCenter();
         int size = (int) worldBorder.getSize();
@@ -61,6 +63,16 @@ public class EndCityManager {
         if (destination.getBlock().getBiome() != Biome.END_HIGHLANDS) {
             return null;
         }
+        File endcityYml = new File(plugin.getDataFolder() + File.separator + "cities.yml");
+        YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
+        for (String key : yml.getKeys(false)) {
+            Location location = yml.getLocation(key + ".MinLocation");
+            if (location.getWorld() == destination.getWorld()) {
+                if (location.distance(destination) <= 200) {
+                    return null;
+                }
+            }
+        }
         return destination;
     }
 
@@ -89,6 +101,9 @@ public class EndCityManager {
 
     private static void savePrePasteLocation(Location destination, Clipboard clipboard, String name) {
         Main plugin = Main.plugin;
+        if (plugin.getConfig().getBoolean("Debug")) {
+            plugin.getLogger().info("Saving undo for city " + name);
+        }
         BlockVector3 dest3 = BlockVector3.at(destination.getX(), destination.getY(), destination.getZ());
         BlockVector3 minVector = clipboard.getMinimumPoint().subtract(clipboard.getOrigin());
         BlockVector3 maxVector = clipboard.getMaximumPoint().subtract(clipboard.getOrigin());
@@ -112,14 +127,12 @@ public class EndCityManager {
             e.printStackTrace();
         }
 
-        File outputFile = new File(plugin.getDataFolder().getAbsolutePath() + File.separator + "undos" + File.separator + name + ".schem");
-        if (!outputFile.exists()) {
-            try {
-                outputFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        File outputFolder = new File(plugin.getDataFolder().getAbsolutePath() + File.separator + "undos");
+        if (!outputFolder.exists()) {
+            outputFolder.mkdir();
         }
+
+        File outputFile = new File(plugin.getDataFolder().getAbsolutePath() + File.separator + "undos" + File.separator + name + ".schem");
 
         try (ClipboardWriter writer = BuiltInClipboardFormat.SPONGE_SCHEMATIC.getWriter(new FileOutputStream(outputFile))) {
             writer.write(newClipboard);
@@ -136,23 +149,39 @@ public class EndCityManager {
         } catch (IOException e) {
             e.printStackTrace();
         }
+        if (plugin.getConfig().getBoolean("Debug")) {
+            plugin.getLogger().info("Saved undo for city " + name);
+        }
     }
 
     public static void summonEndCity(World world, String name) {
         Main plugin = Main.plugin;
-        int count = 0;
+        if (plugin.getConfig().getBoolean("Debug")) {
+            plugin.getLogger().info("Attempting to summon city " + name);
+        }
         Location destination = getEndCityLocation(world);
-        while (destination == null) {
-            count++;
-            if (count > 10) {
-                plugin.getLogger().warning("Failed to find suitable location.");
-                return;
+        if (destination == null) {
+            if (plugin.getConfig().getBoolean("Debug")) {
+                plugin.getLogger().info("Failed to get location for city " + name + " retrying in 15 seconds");
             }
-            destination = getEndCityLocation(world);
+            new BukkitRunnable() {
+
+                @Override
+                public void run() {
+                    summonEndCity(world, name);
+                }
+
+            }.runTaskLater(plugin, 300);
+            return;
+        }
+        if (plugin.getConfig().getBoolean("Debug")) {
+            plugin.getLogger().info("Got location, pasting...");
         }
         Clipboard clipboard = getEndCityClipboard();
         if (clipboard == null) {
-            plugin.getLogger().warning("Failed to get clipboard!");
+            if (plugin.getConfig().getBoolean("Debug")) {
+                plugin.getLogger().warning("Failed to get clipboard!");
+            }
             return;
         }
 
@@ -193,10 +222,16 @@ public class EndCityManager {
                 }
             }
         }
+        Main.pasting = false;
+        Location location = yml.getLocation(name + ".MaxLocation");
+        plugin.getLogger().info("Pasted city " + name + " at (" + location.getX() + " " + location.getY() + " " + location.getZ() + ")");
     }
 
     public static boolean removeCity(String name) {
         Main plugin = Main.plugin;
+        if (plugin.getConfig().getBoolean("Debug")) {
+            plugin.getLogger().info("Removing city " + name);
+        }
         File endcityYml = new File(plugin.getDataFolder() + File.separator + "cities.yml");
         YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
         if (!yml.getKeys(false).contains(name)) {
@@ -229,13 +264,36 @@ public class EndCityManager {
         } catch (WorldEditException e) {
             e.printStackTrace();
         }
+        if (plugin.getConfig().getBoolean("Debug")) {
+            plugin.getLogger().info("Removed blocks! Removing entities...");
+        }
 
         Collection<Entity> entites = Bukkit.getWorld(worldName).getNearbyEntities(centerLoc, region.getWidth() / 2, region.getHeight() / 2, region.getLength() / 2);
+        int count = 0;
         for (Entity entity : entites) {
             if (entity != null && !(entity instanceof Player)) {
                 entity.remove();
+                count++;
             }
         }
+        if (plugin.getConfig().getBoolean("Debug")) {
+            plugin.getLogger().info("Removed " + count + " entities!");
+        }
+        plugin.getLogger().info("Removed city " + name + " at " + region.getMaximumPoint().toString());
         return true;
+    }
+
+    public static void regenCity(World world, String name) {
+        Main.pasting = true;
+        removeCity(name);
+        Main plugin = Main.plugin;
+        new BukkitRunnable() {
+
+            @Override
+            public void run() {
+                summonEndCity(world, name);
+            }
+
+        }.runTaskLater(plugin, 600);
     }
 }

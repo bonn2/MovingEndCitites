@@ -1,7 +1,6 @@
 package bonn2.movingendcities;
 
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
 import java.util.Objects;
@@ -9,24 +8,20 @@ import java.util.Objects;
 public final class Main extends JavaPlugin {
 
     public static Main plugin;
+    public static boolean pasting;
 
     @Override
     public void onEnable() {
         // Plugin startup logic
         plugin = this;
+        pasting = false;
 
         setupConfig();
 
         Objects.requireNonNull(this.getCommand("newcity")).setExecutor(new NewCommand());
-        this.getCommand("removecity").setExecutor(new RemoveCommand());
-        new BukkitRunnable() {
-
-            @Override
-            public void run() {
-                TimedCheck.Check();
-            }
-
-        }.runTaskLater(plugin, 2400);
+        Objects.requireNonNull(this.getCommand("removecity")).setExecutor(new RemoveCommand());
+        TimedCheck.scheduleCheckRegen();
+        TimedCheck.schedulePlayers();
     }
 
     @Override

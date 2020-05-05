@@ -1,5 +1,8 @@
+# Where end cities are allowed to be
 Worlds:
-  -world_the_end
-EndCityMaxAge: 0/0/3
-GracePeriod: 0/0/3
-StagerRegens: true
+  - world_the_end
+# Time until a city regens (days/hours/minutes)
+RegenTime: 0/0/3
+# Time until city is available to regen after player leaves (days/hours/minutes)
+GracePeriod: 0/0/10
+Debug: false

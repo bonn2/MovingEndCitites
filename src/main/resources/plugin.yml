@@ -2,11 +2,12 @@ name: MovingEndCities
 version: @version@
 main: bonn2.movingendcities.Main
 api-version: 1.13
-depend: [
-  -WorldEdit
-]
+depend:
+  - WorldEdit
 commands:
   newcity:
+    permission: movingendcities.create
     usage: /newcity <name>
   removecity:
+    permission: movingendcities.remove
     usage: /removecity <name>
