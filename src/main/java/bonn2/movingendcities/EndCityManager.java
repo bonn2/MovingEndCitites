@@ -53,14 +53,22 @@ public class EndCityManager {
         z -= center.getBlockZ();
         int y = 75;
         Location destination = new Location(world, x, y, z);
+        if (destination.getBlock().getBiome() != Biome.END_HIGHLANDS) {
+            return null;
+        }
+        Collection<? extends Player> players = Bukkit.getOnlinePlayers();
+        for (Player player : players) {
+            if (plugin.getConfig().getStringList("Worlds").contains(player.getWorld().getName())) {
+                if (destination.distance(player.getLocation()) <= 500) {
+                    return null;
+                }
+            }
+        }
         while (destination.getBlock().getType() != Material.END_STONE) {
             if (destination.getY() < 56) {
                 return null;
             }
             destination.setY(destination.getBlockY() - 1);
-        }
-        if (destination.getBlock().getBiome() != Biome.END_HIGHLANDS) {
-            return null;
         }
         File endcityYml = new File(plugin.getDataFolder() + File.separator + "cities.yml");
         YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
