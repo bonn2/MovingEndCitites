@@ -10,6 +10,7 @@ import com.sk89q.worldedit.extent.clipboard.io.*;
 import com.sk89q.worldedit.function.operation.ForwardExtentCopy;
 import com.sk89q.worldedit.function.operation.Operation;
 import com.sk89q.worldedit.function.operation.Operations;
+import com.sk89q.worldedit.math.BlockVector2;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
@@ -272,6 +273,11 @@ public class EndCityManager {
         Region region = new CuboidRegion(new BukkitWorld(pasteLocation.getWorld()), minLocation, maxLocation);
         Location centerLoc = new Location(Bukkit.getWorld(worldName), region.getCenter().getX(), region.getCenter().getY(),region.getCenter().getZ());
 
+        for (BlockVector2 blockVector2 : region.getChunks()) {
+            Chunk chunk = pasteLocation.getWorld().getChunkAt(minLocation.getBlockX() / 16 + blockVector2.getBlockX(), minLocation.getBlockZ() / 16 + blockVector2.getBlockZ());
+            chunk.setForceLoaded(true);
+        }
+
         List<Material> keepList = new ArrayList<>();
         keepList.add(Material.VOID_AIR);
         keepList.add(Material.AIR);
@@ -326,6 +332,12 @@ public class EndCityManager {
         if (plugin.getConfig().getBoolean("Debug")) {
             plugin.getLogger().info("Removed " + count + " entities!");
         }
+
+        for (BlockVector2 blockVector2 : region.getChunks()) {
+            Chunk chunk = pasteLocation.getWorld().getChunkAt(minLocation.getBlockX() / 16 + blockVector2.getBlockX(), minLocation.getBlockZ() / 16 + blockVector2.getBlockZ());
+            chunk.setForceLoaded(false);
+        }
+
         plugin.getLogger().info("Removed city " + name + " at " + region.getMaximumPoint().toString());
         return true;
     }

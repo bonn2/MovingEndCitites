@@ -1,5 +1,6 @@
 package bonn2.movingendcities;
 
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -17,6 +18,8 @@ public final class Main extends JavaPlugin {
         pasting = false;
 
         setupConfig();
+
+        getServer().getPluginManager().registerEvents(new ChunkGenerateListener(), this);
 
         Objects.requireNonNull(this.getCommand("newcity")).setExecutor(new NewCommand());
         Objects.requireNonNull(this.getCommand("removecity")).setExecutor(new RemoveCommand());
