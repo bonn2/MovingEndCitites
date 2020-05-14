@@ -1,5 +1,7 @@
 package bonn2.movingendcities;
 
+import bonn2.movingendcities.commands.NewCommand;
+import bonn2.movingendcities.commands.RemoveCommand;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -11,11 +13,25 @@ public final class Main extends JavaPlugin {
     public static Main plugin;
     public static boolean pasting;
 
+    private static Class<?> craftWorld;
+    private static Class<?> nmsWorld;
+    private static Class<?> nmsChunk;
+    private static Class<?> structureStart;
+    private static Class<?> structureBoundingBox;
+
     @Override
     public void onEnable() {
         // Plugin startup logic
         plugin = this;
         pasting = false;
+
+        try {
+            setupNMSClasses();
+        } catch (ClassNotFoundException | ArrayIndexOutOfBoundsException e) {
+            getLogger().warning("Failed to initialize NMS classes!");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
 
         setupConfig();
 
@@ -38,5 +54,39 @@ public final class Main extends JavaPlugin {
             plugin.getLogger().warning("No config.yml found, making a new one!");
             plugin.saveResource("config.yml", false);
         }
+    }
+
+    private void setupNMSClasses() throws ClassNotFoundException, ArrayIndexOutOfBoundsException {
+        String version;
+
+        version = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
+
+        getLogger().info("Your server is running version " + version);
+
+        craftWorld = Class.forName("org.bukkit.craftbukkit." + version + ".CraftWorld");
+        nmsWorld = Class.forName("net.minecraft.server." + version + ".World");
+        nmsChunk = Class.forName("net.minecraft.server." + version + ".Chunk");
+        structureStart = Class.forName("net.minecraft.server." + version + ".StructureStart");
+        structureBoundingBox = Class.forName("net.minecraft.server." + version + ".StructureBoundingBox");
+    }
+
+    public Class<?> getCraftWorld() {
+        return craftWorld;
+    }
+
+    public Class<?> getNMSWorld() {
+        return nmsWorld;
+    }
+
+    public Class<?> getNMSChunk() {
+        return nmsChunk;
+    }
+
+    public Class<?> getStructureStart() {
+        return structureStart;
+    }
+
+    public Class<?> getStructureBoundingBox() {
+        return structureBoundingBox;
     }
 }

@@ -4,30 +4,54 @@ import com.sk89q.worldedit.bukkit.BukkitWorld;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
-import net.minecraft.server.v1_15_R1.StructureBoundingBox;
 import org.bukkit.Chunk;
 import org.bukkit.World;
-import org.bukkit.craftbukkit.v1_15_R1.CraftWorld;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Map;
 
 public class BoundingBox {
 
-    private World world;
-    private net.minecraft.server.v1_15_R1.World nmsWorld;
-    private net.minecraft.server.v1_15_R1.Chunk nmsChunk;
-    StructureBoundingBox boundingBox;
+    private final World world;
+    private final int x1, y1, z1, x2, y2, z2;
 
-    public BoundingBox(Chunk chunk) {
+    public BoundingBox(Chunk chunk) throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        Main plugin = Main.plugin;
+
+        // NMS Classes and Methods
+        Class<?> CraftWorld = plugin.getCraftWorld();
+        Method getHandle = CraftWorld.getDeclaredMethod("getHandle");
+        Class<?> NMSWorld = plugin.getNMSWorld();
+        Method getChunkAt = NMSWorld.getMethod("getChunkAt", int.class, int.class);
+        Class<?> NMSChunk = plugin.getNMSChunk();
+        Method getStructureStartMap = NMSChunk.getDeclaredMethod("h");
+        Class<?> StructureStart = plugin.getStructureStart();
+        Method getStructureBoundingBox = StructureStart.getDeclaredMethod("c");
+        Class<?> StructureBoundingBox = plugin.getStructureBoundingBox();
+
+        // Logic
         world = chunk.getWorld();
-        nmsWorld  = ((CraftWorld) world).getHandle();
-        nmsChunk = nmsWorld.getChunkAt(chunk.getX(), chunk.getZ());
-        boundingBox = nmsChunk.h().get("EndCity").c();
+        Object craftWorld = CraftWorld.cast(world);
+        Object nmsWorld = NMSWorld.cast(getHandle.invoke(craftWorld));
+        Object nmsChunk = getChunkAt.invoke(nmsWorld, chunk.getX(), chunk.getZ());
+        Object structureStart = ((Map<String, Class<?>>) getStructureStartMap.invoke(nmsChunk)).get("EndCity");
+        Object boundingBox = getStructureBoundingBox.invoke(structureStart);
+
+        // Cache Values
+        x1 = StructureBoundingBox.getDeclaredField("a").getInt(boundingBox);
+        y1 = StructureBoundingBox.getDeclaredField("b").getInt(boundingBox);
+        z1 = StructureBoundingBox.getDeclaredField("c").getInt(boundingBox);
+        x2 = StructureBoundingBox.getDeclaredField("d").getInt(boundingBox);
+        y2 = StructureBoundingBox.getDeclaredField("e").getInt(boundingBox);
+        z2 = StructureBoundingBox.getDeclaredField("f").getInt(boundingBox);
     }
 
     public boolean isValid() {
-        return !(boundingBox.a == 2147483647);
+        return !(x1 == 2147483647);
     }
 
     public Region getWorldEditRegion() {
-        return new CuboidRegion(new BukkitWorld(world), BlockVector3.at(boundingBox.a, boundingBox.b, boundingBox.c), BlockVector3.at(boundingBox.d, boundingBox.e, boundingBox.f));
+        return new CuboidRegion(new BukkitWorld(world), BlockVector3.at(x1, y1, z1), BlockVector3.at(x2, y2, z2));
     }
 }

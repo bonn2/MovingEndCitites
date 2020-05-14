@@ -14,6 +14,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.world.ChunkLoadEvent;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +32,12 @@ public class ChunkGenerateListener implements Listener {
         Main plugin = Main.plugin;
         Chunk chunk = event.getChunk();
         World world = event.getWorld();
-        BoundingBox boundingBox = new BoundingBox(chunk);
+        BoundingBox boundingBox = null;
+        try {
+            boundingBox = new BoundingBox(chunk);
+        } catch (NoSuchFieldException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
+            e.printStackTrace();
+        }
 
         // Only run in defined worlds
         if (!plugin.getConfig().getStringList("Worlds").contains(world.getName())) {
