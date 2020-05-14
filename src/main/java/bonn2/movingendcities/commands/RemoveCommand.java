@@ -1,5 +1,6 @@
-package bonn2.movingendcities;
+package bonn2.movingendcities.commands;
 
+import bonn2.movingendcities.EndCityManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
