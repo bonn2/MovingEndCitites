@@ -34,6 +34,7 @@ public class TimedCheck {
             if (plugin.getConfig().getStringList("Worlds").contains(player.getWorld().getName())) {
                 for(String key : yml.getKeys(false)) {
                     Location location = yml.getLocation(key + ".MinLocation");
+                    assert location != null;
                     if (location.distance(player.getLocation()) <= 500) {
                         yml.set(key + ".MostRecentPlayer", new Date());
                         plugin.getLogger().info("Found player near " + key);
@@ -53,7 +54,7 @@ public class TimedCheck {
 
     public static void scheduleCheckRegen() {
         Main plugin = Main.plugin;
-        String[] timeString = plugin.getConfig().getString("RegenTime").split("/");
+        String[] timeString = Objects.requireNonNull(plugin.getConfig().getString("RegenTime")).split("/");
         int[] time = new int[timeString.length];
         try{
             for(int i = 0; i < timeString.length; i++) {
@@ -87,7 +88,7 @@ public class TimedCheck {
         checkPlayers(false);
         File endcityYml = new File(plugin.getDataFolder() + File.separator + "cities.yml");
         YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
-        String[] gracePeriod = plugin.getConfig().getString("GracePeriod").split("/");
+        String[] gracePeriod = Objects.requireNonNull(plugin.getConfig().getString("GracePeriod")).split("/");
         Date now = new Date();
 
         Map<String, Date> regenList = new HashMap<>();
@@ -96,6 +97,7 @@ public class TimedCheck {
             Date mostRecentPlayer = (Date) yml.get(key + ".MostRecentPlayer");
             Date createdDate = (Date) yml.get(key + ".CreatedDate");
             try {
+                assert mostRecentPlayer != null;
                 cal.setTime(mostRecentPlayer);
                 cal.add(Calendar.HOUR, 24 * Integer.parseInt(gracePeriod[0]));
                 cal.add(Calendar.HOUR, Integer.parseInt(gracePeriod[1]));
@@ -126,7 +128,7 @@ public class TimedCheck {
             }
         }
 
-        World world = yml.getLocation(regen + ".MinLocation").getWorld();
+        World world = Objects.requireNonNull(yml.getLocation(regen + ".MinLocation")).getWorld();
         EndCityManager.regenCity(world, regen);
 
         scheduleCheckRegen();

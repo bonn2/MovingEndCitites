@@ -44,6 +44,7 @@ public class ChunkGenerateListener implements Listener {
             return;
         }
 
+        assert boundingBox != null;
         if (!boundingBox.isValid()) {
             return;
         }

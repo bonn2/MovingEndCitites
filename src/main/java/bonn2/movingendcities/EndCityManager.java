@@ -75,6 +75,7 @@ public class EndCityManager {
         YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
         for (String key : yml.getKeys(false)) {
             Location location = yml.getLocation(key + ".MinLocation");
+            assert location != null;
             if (location.getWorld() == destination.getWorld()) {
                 if (location.distance(destination) <= 200) {
                     return null;
@@ -97,7 +98,7 @@ public class EndCityManager {
             }
             chosenSchematic = schematics[rand.nextInt(schematics.length)];
             Clipboard clipboard = null;
-            try (ClipboardReader reader = ClipboardFormats.findByFile(chosenSchematic).getReader(new FileInputStream(chosenSchematic))) {
+            try (ClipboardReader reader = Objects.requireNonNull(ClipboardFormats.findByFile(chosenSchematic)).getReader(new FileInputStream(chosenSchematic))) {
                 clipboard = reader.read();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -214,8 +215,8 @@ public class EndCityManager {
                 File endcityYml = new File(plugin.getDataFolder() + File.separator + "cities.yml");
                 YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
                 yml.set(name + ".CreatedDate", createdDate);
-                Chunk minChunk = yml.getLocation(name + ".MinLocation").getChunk();
-                Chunk maxChunk = yml.getLocation(name + ".MaxLocation").getChunk();
+                Chunk minChunk = Objects.requireNonNull(yml.getLocation(name + ".MinLocation")).getChunk();
+                Chunk maxChunk = Objects.requireNonNull(yml.getLocation(name + ".MaxLocation")).getChunk();
                 try {
                     yml.save(endcityYml);
                 } catch (IOException e) {
@@ -236,6 +237,7 @@ public class EndCityManager {
                 }
                 Main.pasting = false;
                 Location location = yml.getLocation(name + ".MaxLocation");
+                assert location != null;
                 plugin.getLogger().info("Pasted city " + name + " at (" + location.getX() + " " + location.getY() + " " + location.getZ() + ")");
             }
 
@@ -267,9 +269,16 @@ public class EndCityManager {
             return false;
         }
         Location pasteLocation = yml.getLocation(name + ".MinLocation");
-        String worldName = pasteLocation.getWorld().getName();
-        BlockVector3 minLocation = BlockVector3.at(yml.getLocation(name + ".MinLocation").getX(), yml.getLocation(name + ".MinLocation").getY(), yml.getLocation(name + ".MinLocation").getZ());
-        BlockVector3 maxLocation = BlockVector3.at(yml.getLocation(name + ".MaxLocation").getX(), yml.getLocation(name + ".MaxLocation").getY(), yml.getLocation(name + ".MaxLocation").getZ());
+        assert pasteLocation != null;
+        String worldName = Objects.requireNonNull(pasteLocation.getWorld()).getName();
+        BlockVector3 minLocation = BlockVector3.at(
+                Objects.requireNonNull(yml.getLocation(name + ".MinLocation")).getX(),
+                Objects.requireNonNull(yml.getLocation(name + ".MinLocation")).getY(),
+                Objects.requireNonNull(yml.getLocation(name + ".MinLocation")).getZ());
+        BlockVector3 maxLocation = BlockVector3.at(
+                Objects.requireNonNull(yml.getLocation(name + ".MaxLocation")).getX(),
+                Objects.requireNonNull(yml.getLocation(name + ".MaxLocation")).getY(),
+                Objects.requireNonNull(yml.getLocation(name + ".MaxLocation")).getZ());
         Region region = new CuboidRegion(new BukkitWorld(pasteLocation.getWorld()), minLocation, maxLocation);
         Location centerLoc = new Location(Bukkit.getWorld(worldName), region.getCenter().getX(), region.getCenter().getY(),region.getCenter().getZ());
 
@@ -300,6 +309,7 @@ public class EndCityManager {
         Clipboard clipboard = null;
 
         ClipboardFormat format = ClipboardFormats.findByFile(file);
+        assert format != null;
         try (ClipboardReader reader = format.getReader(new FileInputStream(file))) {
             clipboard = reader.read();
         } catch (IOException e) {
@@ -307,6 +317,7 @@ public class EndCityManager {
         }
 
         try (EditSession editSession = WorldEdit.getInstance().getEditSessionFactory().getEditSession(new BukkitWorld(pasteLocation.getWorld()), -1)) {
+            assert clipboard != null;
             Operation operation = new ClipboardHolder(clipboard)
                     .createPaste(editSession)
                     .ignoreAirBlocks(true)
