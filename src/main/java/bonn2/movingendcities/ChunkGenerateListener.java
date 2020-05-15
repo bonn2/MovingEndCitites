@@ -22,21 +22,13 @@ public class ChunkGenerateListener implements Listener {
 
     @EventHandler
     public void chunkGenerate(ChunkLoadEvent event) {
+        Main plugin = Main.plugin;
+        Chunk chunk = event.getChunk();
+        World world = event.getWorld();
 
         // Only run logic if chunk is new
         if (!event.isNewChunk()) {
             return;
-        }
-
-        // Init Vars
-        Main plugin = Main.plugin;
-        Chunk chunk = event.getChunk();
-        World world = event.getWorld();
-        BoundingBox boundingBox = null;
-        try {
-            boundingBox = new BoundingBox(chunk);
-        } catch (NoSuchFieldException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
-            e.printStackTrace();
         }
 
         // Only run in defined worlds
@@ -44,7 +36,14 @@ public class ChunkGenerateListener implements Listener {
             return;
         }
 
-        assert boundingBox != null;
+        BoundingBox boundingBox;
+        try {
+            boundingBox = new BoundingBox(chunk);
+        } catch (NoSuchFieldException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
+            e.printStackTrace();
+            return;
+        }
+
         if (!boundingBox.isValid()) {
             return;
         }
@@ -111,7 +110,7 @@ public class ChunkGenerateListener implements Listener {
                 }
             }*/
 
-        // Double check all entities were removed
+        // Double check all entities were removed and unforceload chunks
         for (BlockVector2 blockVector2 : region.getChunks()) {
             Chunk removeChunk = world.getChunkAt(blockVector2.getX(), blockVector2.getZ());
             for (Entity entity : removeChunk.getEntities()) {
