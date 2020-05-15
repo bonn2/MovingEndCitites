@@ -1,6 +1,8 @@
-# Where end cities are allowed to be
+# Where to put and remove end cities
 Worlds:
   - world_the_end
+#
+RemoveVanillaCities: true
 # Time until a city regens (days/hours/minutes)
 RegenTime: 0/0/3
 # Time until city is available to regen after player leaves (days/hours/minutes)
