@@ -38,10 +38,10 @@ public class BoundingBox {
         Object nmsWorld = NMSWorld.cast(getHandle.invoke(craftWorld));
         Object nmsChunk = getChunkAt.invoke(nmsWorld, chunk.getX(), chunk.getZ());
         Object structureStart = ((Map<String, Class<?>>) getStructureStartMap.invoke(nmsChunk)).get("EndCity");
-        valid = (boolean) isValid.invoke(structureStart);
         Object boundingBox = getStructureBoundingBox.invoke(structureStart);
 
         // Cache Values
+        valid = (boolean) isValid.invoke(structureStart);
         x1 = StructureBoundingBox.getDeclaredField("a").getInt(boundingBox);
         y1 = StructureBoundingBox.getDeclaredField("b").getInt(boundingBox);
         z1 = StructureBoundingBox.getDeclaredField("c").getInt(boundingBox);
