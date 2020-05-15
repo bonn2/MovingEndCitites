@@ -15,6 +15,7 @@ public class BoundingBox {
 
     private final World world;
     private final int x1, y1, z1, x2, y2, z2;
+    private final boolean valid;
 
     public BoundingBox(Chunk chunk) throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         Main plugin = Main.plugin;
@@ -27,6 +28,7 @@ public class BoundingBox {
         Class<?> NMSChunk = plugin.getNMSChunk();
         Method getStructureStartMap = NMSChunk.getDeclaredMethod("h");
         Class<?> StructureStart = plugin.getStructureStart();
+        Method isValid = StructureStart.getDeclaredMethod("e");
         Method getStructureBoundingBox = StructureStart.getDeclaredMethod("c");
         Class<?> StructureBoundingBox = plugin.getStructureBoundingBox();
 
@@ -36,6 +38,7 @@ public class BoundingBox {
         Object nmsWorld = NMSWorld.cast(getHandle.invoke(craftWorld));
         Object nmsChunk = getChunkAt.invoke(nmsWorld, chunk.getX(), chunk.getZ());
         Object structureStart = ((Map<String, Class<?>>) getStructureStartMap.invoke(nmsChunk)).get("EndCity");
+        valid = (boolean) isValid.invoke(structureStart);
         Object boundingBox = getStructureBoundingBox.invoke(structureStart);
 
         // Cache Values
@@ -48,7 +51,7 @@ public class BoundingBox {
     }
 
     public boolean isValid() {
-        return !(x1 == 2147483647);
+        return valid;
     }
 
     public Region getWorldEditRegion() {
