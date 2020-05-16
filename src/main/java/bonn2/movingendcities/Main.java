@@ -58,10 +58,7 @@ public final class Main extends JavaPlugin {
 
     private void setupNMSClasses() throws ClassNotFoundException, ArrayIndexOutOfBoundsException {
         String version;
-
         version = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
-
-        getLogger().info("Your server is running version " + version);
 
         craftWorld = Class.forName("org.bukkit.craftbukkit." + version + ".CraftWorld");
         nmsWorld = Class.forName("net.minecraft.server." + version + ".World");
