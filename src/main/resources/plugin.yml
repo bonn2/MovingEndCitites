@@ -2,14 +2,10 @@ name: MovingEndCities
 version: 1.4-SNAPSHOT
 main: bonn2.movingendcities.Main
 api-version: 1.13
-load: STARTUP
 author: bonn2
 depend:
   - WorldEdit
 commands:
-  newcity:
-    permission: movingendcities.create
-    usage: /newcity <name>
-  removecity:
-    permission: movingendcities.remove
-    usage: /removecity <name>
+  movingendcities:
+    permission: movingendcities.use
+    usage: /movingendcities [version]

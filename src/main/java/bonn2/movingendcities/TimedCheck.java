@@ -3,17 +3,35 @@ package bonn2.movingendcities;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitScheduler;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
+import static org.bukkit.Bukkit.getServer;
+
 public class TimedCheck {
 
-    public static void schedulePlayers() {
+    // TODO: Schedule "Moving" End Cities to generate when server starts
+
+    public static void start() {
+        List<String> cities = new ArrayList<>();
+        for (String key : Main.citiesYml.getKeys(false)) {
+            if (Main.citiesYml.getBoolean(key + ".Moving")) {
+                cities.add(key);
+            }
+        }
+        for (String key : cities) {
+            BukkitScheduler scheduler = getServer().getScheduler();
+            scheduler.scheduleSyncDelayedTask(Main.plugin, () -> EndCityManager.summonEndCity(Bukkit.getWorld(Objects.requireNonNull(Main.citiesYml.getString(key + ".World"))), key), cities.indexOf(key) + (2 * cities.indexOf(key)));
+        }
+        scheduleCheckRegen();
+        schedulePlayers();
+    }
+
+    private static void schedulePlayers() {
         Main plugin = Main.plugin;
         new BukkitRunnable() {
 
@@ -28,22 +46,23 @@ public class TimedCheck {
     private static void checkPlayers(boolean reschedule) {
         Main plugin = Main.plugin;
         Collection<? extends Player> players = Bukkit.getOnlinePlayers();
-        File endcityYml = new File(plugin.getDataFolder() + File.separator + "cities.yml");
-        YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
         for (Player player : players) {
             if (plugin.getConfig().getStringList("Worlds").contains(player.getWorld().getName())) {
-                for(String key : yml.getKeys(false)) {
-                    Location location = yml.getLocation(key + ".MinLocation");
+                for(String key : Main.citiesYml.getKeys(false)) {
+                    if (Main.citiesYml.getBoolean(key + ".Moving")) {
+                        continue;
+                    }
+                    Location location = Main.citiesYml.getLocation(key + ".MinLocation");
                     assert location != null;
                     if (location.distance(player.getLocation()) <= 500) {
-                        yml.set(key + ".MostRecentPlayer", new Date());
+                        Main.citiesYml.get(key + ".MostRecentPlayer", new Date());
                         plugin.getLogger().info("Found player near " + key);
                     }
                 }
             }
         }
         try {
-            yml.save(endcityYml);
+            Main.saveCitiesYml();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -52,7 +71,7 @@ public class TimedCheck {
         }
     }
 
-    public static void scheduleCheckRegen() {
+    private static void scheduleCheckRegen() {
         Main plugin = Main.plugin;
         String[] timeString = Objects.requireNonNull(plugin.getConfig().getString("RegenTime")).split("/");
         int[] time = new int[timeString.length];
@@ -86,16 +105,17 @@ public class TimedCheck {
             return;
         }
         checkPlayers(false);
-        File endcityYml = new File(plugin.getDataFolder() + File.separator + "cities.yml");
-        YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
         String[] gracePeriod = Objects.requireNonNull(plugin.getConfig().getString("GracePeriod")).split("/");
         Date now = new Date();
 
         Map<String, Date> regenList = new HashMap<>();
-        for(String key : yml.getKeys(false)) { // Populate list of cities that are ready to regen
+        for(String key : Main.citiesYml.getKeys(false)) { // Populate list of cities that are ready to regen
+            if (Main.citiesYml.getBoolean(key + ".Moving")) {
+                continue;
+            }
             Calendar cal = Calendar.getInstance();
-            Date mostRecentPlayer = (Date) yml.get(key + ".MostRecentPlayer");
-            Date createdDate = (Date) yml.get(key + ".CreatedDate");
+            Date mostRecentPlayer = (Date) Main.citiesYml.get(key + ".MostRecentPlayer");
+            Date createdDate = (Date) Main.citiesYml.get(key + ".CreatedDate");
             try {
                 assert mostRecentPlayer != null;
                 cal.setTime(mostRecentPlayer);
@@ -128,7 +148,7 @@ public class TimedCheck {
             }
         }
 
-        World world = Objects.requireNonNull(yml.getLocation(regen + ".MinLocation")).getWorld();
+        World world = Objects.requireNonNull(Main.citiesYml.getLocation(regen + ".MinLocation")).getWorld();
         EndCityManager.regenCity(world, regen);
 
         scheduleCheckRegen();

@@ -20,7 +20,6 @@ import org.bukkit.block.Biome;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -54,7 +53,7 @@ public class EndCityManager {
         z -= center.getBlockZ();
         int y = 75;
         Location destination = new Location(world, x, y, z);
-        if (destination.getBlock().getBiome() != Biome.END_HIGHLANDS) {
+        if (destination.getBlock().getBiome() != Biome.END_HIGHLANDS && destination.getBlock().getBiome() != Biome.END_MIDLANDS) {
             return null;
         }
         Collection<? extends Player> players = Bukkit.getOnlinePlayers();
@@ -71,10 +70,12 @@ public class EndCityManager {
             }
             destination.setY(destination.getBlockY() - 1);
         }
-        File endcityYml = new File(plugin.getDataFolder() + File.separator + "cities.yml");
-        YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
-        for (String key : yml.getKeys(false)) {
-            Location location = yml.getLocation(key + ".MinLocation");
+
+        for (String key : Main.citiesYml.getKeys(false)) {
+            if (Main.citiesYml.getBoolean(key + ".Moving", false)) {
+                continue;
+            }
+            Location location = Main.citiesYml.getLocation(key + ".MinLocation");
             assert location != null;
             if (location.getWorld() == destination.getWorld()) {
                 if (location.distance(destination) <= 200) {
@@ -85,7 +86,7 @@ public class EndCityManager {
         return destination;
     }
 
-    private static Clipboard getEndCityClipboard() {
+    private static File getEndCitySchematic() {
         Main plugin = Main.plugin;
         File schemDir = new File(plugin.getDataFolder() + File.separator + "schematics");
         File[] schematics;
@@ -97,13 +98,7 @@ public class EndCityManager {
                 return null;
             }
             chosenSchematic = schematics[rand.nextInt(schematics.length)];
-            Clipboard clipboard = null;
-            try (ClipboardReader reader = Objects.requireNonNull(ClipboardFormats.findByFile(chosenSchematic)).getReader(new FileInputStream(chosenSchematic))) {
-                clipboard = reader.read();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return clipboard;
+            return chosenSchematic;
         }
         return null;
     }
@@ -149,12 +144,10 @@ public class EndCityManager {
             e.printStackTrace();
         }
 
-        File endcityYml = new File(plugin.getDataFolder() + File.separator + "cities.yml");
-        YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
-        yml.set(name + ".MinLocation", minLocation);
-        yml.set(name + ".MaxLocation", maxLocation);
+        Main.citiesYml.set(name + ".MinLocation", minLocation);
+        Main.citiesYml.set(name + ".MaxLocation", maxLocation);
         try {
-            yml.save(endcityYml);
+            Main.saveCitiesYml();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -163,15 +156,26 @@ public class EndCityManager {
         }
     }
 
+    // TODO: Make summonEndCity not require world. It should already have this data in yml
     public static void summonEndCity(World world, String name) {
         Main plugin = Main.plugin;
+        if (Main.citiesYml.get(name) == null) {
+            return;
+        }
         if (plugin.getConfig().getBoolean("Debug")) {
             plugin.getLogger().info("Attempting to summon city " + name);
+        }
+        Main.citiesYml.set(name + ".Moving", true);
+        Main.citiesYml.set(name + ".World", world.getName());
+        try {
+            Main.saveCitiesYml();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
         Location destination = getEndCityLocation(world);
         if (destination == null) {
             if (plugin.getConfig().getBoolean("Debug")) {
-                plugin.getLogger().info("Failed to get location for city " + name + " retrying in 15 seconds");
+                plugin.getLogger().info("Failed to get location for city " + name + " retrying in 10 seconds");
             }
             new BukkitRunnable() {
 
@@ -180,13 +184,20 @@ public class EndCityManager {
                     summonEndCity(world, name);
                 }
 
-            }.runTaskLater(plugin, 300);
+            }.runTaskLater(plugin, 200);
             return;
         }
         if (plugin.getConfig().getBoolean("Debug")) {
             plugin.getLogger().info("Got location, pasting...");
         }
-        Clipboard clipboard = getEndCityClipboard();
+        File chosenSchematic = getEndCitySchematic();
+        Clipboard clipboard = null;
+        assert chosenSchematic != null;
+        try (ClipboardReader reader = Objects.requireNonNull(ClipboardFormats.findByFile(chosenSchematic)).getReader(new FileInputStream(chosenSchematic))) {
+            clipboard = reader.read();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         if (clipboard == null) {
             if (plugin.getConfig().getBoolean("Debug")) {
                 plugin.getLogger().warning("Failed to get clipboard!");
@@ -196,12 +207,13 @@ public class EndCityManager {
 
         savePrePasteLocation(destination, clipboard, name);
 
+        Clipboard finalClipboard = clipboard;
         new BukkitRunnable() {
 
             @Override
             public void run() {
                 try (EditSession editSession = WorldEdit.getInstance().getEditSessionFactory().getEditSession(new BukkitWorld(destination.getWorld()), -1)) {
-                    Operation operation = new ClipboardHolder(clipboard)
+                    Operation operation = new ClipboardHolder(finalClipboard)
                             .createPaste(editSession)
                             .to(BlockVector3.at(destination.getX(), destination.getY() + 1, destination.getZ()))
                             .ignoreAirBlocks(true)
@@ -212,13 +224,12 @@ public class EndCityManager {
                     return;
                 }
                 Date createdDate = new Date();
-                File endcityYml = new File(plugin.getDataFolder() + File.separator + "cities.yml");
-                YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
-                yml.set(name + ".CreatedDate", createdDate);
-                Chunk minChunk = Objects.requireNonNull(yml.getLocation(name + ".MinLocation")).getChunk();
-                Chunk maxChunk = Objects.requireNonNull(yml.getLocation(name + ".MaxLocation")).getChunk();
+                Main.citiesYml.set(name + ".CreatedDate", createdDate);
+                Main.citiesYml.set(name + ".Schematic", chosenSchematic.getName());
+                Chunk minChunk = Objects.requireNonNull(Main.citiesYml.getLocation(name + ".MinLocation")).getChunk();
+                Chunk maxChunk = Objects.requireNonNull(Main.citiesYml.getLocation(name + ".MaxLocation")).getChunk();
                 try {
-                    yml.save(endcityYml);
+                    Main.saveCitiesYml();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -236,7 +247,13 @@ public class EndCityManager {
                     }
                 }
                 Main.pasting = false;
-                Location location = yml.getLocation(name + ".MaxLocation");
+                Main.citiesYml.set(name + ".Moving", false);
+                try {
+                    Main.saveCitiesYml();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                Location location = Main.citiesYml.getLocation(name + ".MaxLocation");
                 assert location != null;
                 plugin.getLogger().info("Pasted city " + name + " at (" + location.getX() + " " + location.getY() + " " + location.getZ() + ")");
             }
@@ -247,14 +264,15 @@ public class EndCityManager {
 
 
     public static void deleteCity(String name) {
-        Main plugin = Main.plugin;
-        File endcityYml = new File(plugin.getDataFolder() + File.separator + "cities.yml");
-        YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
-        yml.set(name, null);
+        Main.citiesYml.set(name, null);
         try {
-            yml.save(endcityYml);
+            Main.saveCitiesYml();
         } catch (IOException e) {
             e.printStackTrace();
+        }
+        File oldUndo = new File(Main.plugin.getDataFolder() + File.separator + "undos" + File.separator + name + ".schem");
+        if (oldUndo.exists()) {
+            oldUndo.delete();
         }
     }
 
@@ -263,22 +281,25 @@ public class EndCityManager {
         if (plugin.getConfig().getBoolean("Debug")) {
             plugin.getLogger().info("Removing city " + name);
         }
-        File endcityYml = new File(plugin.getDataFolder() + File.separator + "cities.yml");
-        YamlConfiguration yml = YamlConfiguration.loadConfiguration(endcityYml);
-        if (!yml.getKeys(false).contains(name)) {
+        if (!Main.citiesYml.getKeys(false).contains(name)) {
             return false;
         }
-        Location pasteLocation = yml.getLocation(name + ".MinLocation");
+        Location pasteLocation = Main.citiesYml.getLocation(name + ".MinLocation");
         assert pasteLocation != null;
-        String worldName = Objects.requireNonNull(pasteLocation.getWorld()).getName();
+        String worldName;
+        try {
+            worldName = pasteLocation.getWorld().getName();
+        } catch (NullPointerException e) {
+            return false;
+        }
         BlockVector3 minLocation = BlockVector3.at(
-                Objects.requireNonNull(yml.getLocation(name + ".MinLocation")).getX(),
-                Objects.requireNonNull(yml.getLocation(name + ".MinLocation")).getY(),
-                Objects.requireNonNull(yml.getLocation(name + ".MinLocation")).getZ());
+                Objects.requireNonNull(Main.citiesYml.getLocation(name + ".MinLocation")).getX(),
+                Objects.requireNonNull(Main.citiesYml.getLocation(name + ".MinLocation")).getY(),
+                Objects.requireNonNull(Main.citiesYml.getLocation(name + ".MinLocation")).getZ());
         BlockVector3 maxLocation = BlockVector3.at(
-                Objects.requireNonNull(yml.getLocation(name + ".MaxLocation")).getX(),
-                Objects.requireNonNull(yml.getLocation(name + ".MaxLocation")).getY(),
-                Objects.requireNonNull(yml.getLocation(name + ".MaxLocation")).getZ());
+                Objects.requireNonNull(Main.citiesYml.getLocation(name + ".MaxLocation")).getX(),
+                Objects.requireNonNull(Main.citiesYml.getLocation(name + ".MaxLocation")).getY(),
+                Objects.requireNonNull(Main.citiesYml.getLocation(name + ".MaxLocation")).getZ());
         Region region = new CuboidRegion(new BukkitWorld(pasteLocation.getWorld()), minLocation, maxLocation);
         Location centerLoc = new Location(Bukkit.getWorld(worldName), region.getCenter().getX(), region.getCenter().getY(),region.getCenter().getZ());
 
@@ -354,9 +375,10 @@ public class EndCityManager {
     }
 
     public static void regenCity(World world, String name) {
-        Main.pasting = true;
-        removeCity(name);
         Main plugin = Main.plugin;
+        Main.pasting = true;
+        plugin.getLogger().info("Moving " + name);
+        removeCity(name);
         new BukkitRunnable() {
 
             @Override
@@ -364,6 +386,6 @@ public class EndCityManager {
                 summonEndCity(world, name);
             }
 
-        }.runTaskLater(plugin, 600);
+        }.runTaskLater(plugin, 100);
     }
 }
