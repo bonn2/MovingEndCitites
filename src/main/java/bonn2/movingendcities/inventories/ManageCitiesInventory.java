@@ -182,11 +182,11 @@ public class ManageCitiesInventory implements Listener {
     public void inventoryClick(InventoryClickEvent event) {
         Inventory inventory = event.getInventory();
         ItemStack clickedItem = event.getCurrentItem();
-        if (!event.getWhoClicked().getUniqueId().equals(player.getUniqueId()) || !inventories.contains(inventory) || clickedItem == null) {
+        if (!event.getWhoClicked().getUniqueId().equals(player.getUniqueId()) || !inventories.contains(inventory)) {
             return;
         }
-        PersistentDataContainer data = Objects.requireNonNull(clickedItem.getItemMeta()).getPersistentDataContainer();
         try {
+            PersistentDataContainer data = Objects.requireNonNull(clickedItem.getItemMeta()).getPersistentDataContainer();
             switch (Objects.requireNonNull(data.get(namespace, PersistentDataType.STRING))) {
                 case "Next": {
                     nextPage();
