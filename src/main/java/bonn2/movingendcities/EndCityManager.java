@@ -34,7 +34,6 @@ public class EndCityManager {
         WorldBorder worldBorder = world.getWorldBorder();
         Location center = worldBorder.getCenter();
         int size = (int) worldBorder.getSize() / 2;
-        System.out.println(size);
         Random rand = new Random();
         int x = rand.nextInt(size);
         int z = rand.nextInt(size);
