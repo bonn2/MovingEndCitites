@@ -33,21 +33,18 @@ public class EndCityManager {
         Main plugin = Main.plugin;
         WorldBorder worldBorder = world.getWorldBorder();
         Location center = worldBorder.getCenter();
-        int size = (int) worldBorder.getSize();
+        int size = (int) worldBorder.getSize() / 2;
+        System.out.println(size);
         Random rand = new Random();
         int x = rand.nextInt(size);
         int z = rand.nextInt(size);
-        if (x < 1000) {
-            x += 1000;
+        boolean xPositive = rand.nextBoolean();
+        boolean zPositive = rand.nextBoolean();
+        if (!xPositive) {
+            x *= -1;
         }
-        if (z < 1000){
-            z += 1000;
-        }
-        if (x > (size / 2)) {
-            x /= -2;
-        }
-        if (z > (size / 2)) {
-            z /= -2;
+        if (!zPositive) {
+            z *= -1;
         }
         x -= center.getBlockX();
         z -= center.getBlockZ();
