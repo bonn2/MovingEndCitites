@@ -111,8 +111,10 @@ public class EndCityManager {
         BlockVector3 maxPoint = maxVector.add(dest3).add(0, 1, 0);
         Location minLocation = new Location(destination.getWorld(), minPoint.getBlockX(), minPoint.getBlockY(), minPoint.getBlockZ());
         Location maxLocation = new Location(destination.getWorld(), maxPoint.getBlockX(), maxPoint.getBlockY(), maxPoint.getBlockZ());
-        System.out.println(minPoint.toString());
-        System.out.println(maxPoint.toString());
+        if (plugin.getConfig().getBoolean("Debug")) {
+            System.out.println(minPoint.toString());
+            System.out.println(maxPoint.toString());
+        }
         Region region = new CuboidRegion(new BukkitWorld(destination.getWorld()), minPoint, maxPoint);
 
         Clipboard newClipboard = new BlockArrayClipboard(region);
