@@ -1,6 +1,6 @@
 package bonn2.movingendcities.inventories;
 
-import bonn2.movingendcities.EndCityManager;
+import bonn2.movingendcities.utils.EndCityManager;
 import bonn2.movingendcities.Main;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;

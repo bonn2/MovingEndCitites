@@ -1,5 +1,6 @@
-package bonn2.movingendcities;
+package bonn2.movingendcities.utils;
 
+import bonn2.movingendcities.Main;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;

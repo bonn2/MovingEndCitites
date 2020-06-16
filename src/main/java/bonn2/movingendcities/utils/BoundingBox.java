@@ -1,5 +1,6 @@
-package bonn2.movingendcities;
+package bonn2.movingendcities.utils;
 
+import bonn2.movingendcities.Main;
 import com.sk89q.worldedit.bukkit.BukkitWorld;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.CuboidRegion;

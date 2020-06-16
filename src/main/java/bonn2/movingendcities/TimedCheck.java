@@ -1,5 +1,6 @@
 package bonn2.movingendcities;
 
+import bonn2.movingendcities.utils.EndCityManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;

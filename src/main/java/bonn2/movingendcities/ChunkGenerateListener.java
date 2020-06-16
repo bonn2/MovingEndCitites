@@ -1,5 +1,6 @@
 package bonn2.movingendcities;
 
+import bonn2.movingendcities.utils.BoundingBox;
 import com.sk89q.worldedit.math.BlockVector2;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.Region;
