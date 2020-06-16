@@ -23,6 +23,7 @@ import org.bukkit.block.Chest;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitScheduler;
 
 import java.io.*;
 import java.util.*;
@@ -268,10 +269,6 @@ public class EndCityManager {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        File oldUndo = new File(Main.plugin.getDataFolder() + File.separator + "undos" + File.separator + name + ".schem");
-        if (oldUndo.exists()) {
-            oldUndo.delete();
-        }
     }
 
     public static boolean removeCity(String name) {
@@ -324,51 +321,58 @@ public class EndCityManager {
             }
         }
 
-        File file = new File(plugin.getDataFolder() + File.separator + "undos" + File.separator + name + ".schem");
-        Clipboard clipboard = null;
+        BukkitScheduler scheduler = Main.plugin.getServer().getScheduler();
+        scheduler.scheduleSyncDelayedTask(Main.plugin, () -> {
+            File file = new File(plugin.getDataFolder() + File.separator + "undos" + File.separator + name + ".schem");
+            Clipboard clipboard = null;
 
-        ClipboardFormat format = ClipboardFormats.findByFile(file);
-        assert format != null;
-        try (ClipboardReader reader = format.getReader(new FileInputStream(file))) {
-            clipboard = reader.read();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        try (EditSession editSession = WorldEdit.getInstance().getEditSessionFactory().getEditSession(new BukkitWorld(pasteLocation.getWorld()), -1)) {
-            assert clipboard != null;
-            Operation operation = new ClipboardHolder(clipboard)
-                    .createPaste(editSession)
-                    .ignoreAirBlocks(true)
-                    .to(BlockVector3.at(pasteLocation.getX(), pasteLocation.getY(), pasteLocation.getZ()))
-                    // configure here
-                    .build();
-            Operations.complete(operation);
-        } catch (WorldEditException e) {
-            e.printStackTrace();
-        }
-        if (plugin.getConfig().getBoolean("Debug")) {
-            plugin.getLogger().info("Removed blocks! Removing entities...");
-        }
-
-        Collection<Entity> entites = Bukkit.getWorld(worldName).getNearbyEntities(centerLoc, region.getWidth() / 2, region.getHeight() / 2, region.getLength() / 2);
-        int count = 0;
-        for (Entity entity : entites) {
-            if (entity != null && !(entity instanceof Player)) {
-                entity.remove();
-                count++;
+            ClipboardFormat format = ClipboardFormats.findByFile(file);
+            assert format != null;
+            try (ClipboardReader reader = format.getReader(new FileInputStream(file))) {
+                clipboard = reader.read();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        }
-        if (plugin.getConfig().getBoolean("Debug")) {
-            plugin.getLogger().info("Removed " + count + " entities!");
-        }
 
-        for (BlockVector2 blockVector2 : region.getChunks()) {
-            Chunk chunk = pasteLocation.getWorld().getChunkAt(minLocation.getBlockX() / 16 + blockVector2.getBlockX(), minLocation.getBlockZ() / 16 + blockVector2.getBlockZ());
-            chunk.setForceLoaded(false);
-        }
+            try (EditSession editSession = WorldEdit.getInstance().getEditSessionFactory().getEditSession(new BukkitWorld(pasteLocation.getWorld()), -1)) {
+                assert clipboard != null;
+                Operation operation = new ClipboardHolder(clipboard)
+                        .createPaste(editSession)
+                        .ignoreAirBlocks(true)
+                        .to(BlockVector3.at(pasteLocation.getX(), pasteLocation.getY(), pasteLocation.getZ()))
+                        // configure here
+                        .build();
+                Operations.complete(operation);
+            } catch (WorldEditException e) {
+                e.printStackTrace();
+            }
+            if (plugin.getConfig().getBoolean("Debug")) {
+                plugin.getLogger().info("Removed blocks! Removing entities...");
+            }
 
-        plugin.getLogger().info("Removed city " + name + " at " + region.getMaximumPoint().toString());
+            Collection<Entity> entites = Bukkit.getWorld(worldName).getNearbyEntities(centerLoc, region.getWidth() / 2, region.getHeight() / 2, region.getLength() / 2);
+            int count = 0;
+            for (Entity entity : entites) {
+                if (entity != null && !(entity instanceof Player)) {
+                    entity.remove();
+                    count++;
+                }
+            }
+            if (plugin.getConfig().getBoolean("Debug")) {
+                plugin.getLogger().info("Removed " + count + " entities!");
+            }
+
+            for (BlockVector2 blockVector2 : region.getChunks()) {
+                Chunk chunk = pasteLocation.getWorld().getChunkAt(minLocation.getBlockX() / 16 + blockVector2.getBlockX(), minLocation.getBlockZ() / 16 + blockVector2.getBlockZ());
+                chunk.setForceLoaded(false);
+            }
+
+            plugin.getLogger().info("Removed city " + name + " at " + region.getMaximumPoint().toString());
+            File oldUndo = new File(Main.plugin.getDataFolder() + File.separator + "undos" + File.separator + name + ".schem");
+            if (oldUndo.exists()) {
+                oldUndo.delete();
+            }
+        }, 20L);
         return true;
     }
 
