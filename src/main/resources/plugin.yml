@@ -1,5 +1,5 @@
 name: MovingEndCities
-version: 1.4.3-SNAPSHOT
+version: 1.5.0-SNAPSHOT
 main: bonn2.movingendcities.Main
 api-version: 1.13
 author: bonn2
