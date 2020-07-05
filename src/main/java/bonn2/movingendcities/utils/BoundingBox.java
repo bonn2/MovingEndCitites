@@ -1,54 +1,43 @@
 package bonn2.movingendcities.utils;
 
-import bonn2.movingendcities.Main;
 import com.sk89q.worldedit.bukkit.BukkitWorld;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.regions.CuboidRegion;
 import com.sk89q.worldedit.regions.Region;
+import net.minecraft.server.v1_16_R1.StructureBoundingBox;
+import net.minecraft.server.v1_16_R1.StructureGenerator;
 import org.bukkit.Chunk;
 import org.bukkit.World;
-
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Map;
+import org.bukkit.craftbukkit.v1_16_R1.CraftWorld;
 
 public class BoundingBox {
 
-    private final World world;
-    private final int x1, y1, z1, x2, y2, z2;
+    private int x1, y1, z1, x2, y2, z2;
     private final boolean valid;
+    private final World world;
+    StructureBoundingBox boundingBox;
 
-    public BoundingBox(Chunk chunk) throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Main plugin = Main.plugin;
+    public BoundingBox(Chunk chunk) {
 
-        // NMS Classes and Methods
-        Class<?> CraftWorld = plugin.getCraftWorld();
-        Method getHandle = CraftWorld.getDeclaredMethod("getHandle");
-        Class<?> NMSWorld = plugin.getNMSWorld();
-        Method getChunkAt = NMSWorld.getMethod("getChunkAt", int.class, int.class);
-        Class<?> NMSChunk = plugin.getNMSChunk();
-        Method getStructureStartMap = NMSChunk.getDeclaredMethod("h");
-        Class<?> StructureStart = plugin.getStructureStart();
-        Method isValid = StructureStart.getDeclaredMethod("e");
-        Method getStructureBoundingBox = StructureStart.getDeclaredMethod("c");
-        Class<?> StructureBoundingBox = plugin.getStructureBoundingBox();
-
-        // Logic
         world = chunk.getWorld();
-        Object craftWorld = CraftWorld.cast(world);
-        Object nmsWorld = NMSWorld.cast(getHandle.invoke(craftWorld));
-        Object nmsChunk = getChunkAt.invoke(nmsWorld, chunk.getX(), chunk.getZ());
-        Object structureStart = ((Map<String, Class<?>>) getStructureStartMap.invoke(nmsChunk)).get("EndCity");
-        Object boundingBox = getStructureBoundingBox.invoke(structureStart);
+        net.minecraft.server.v1_16_R1.World nmsWorld = ((CraftWorld) world).getHandle();
+        net.minecraft.server.v1_16_R1.Chunk nmsChunk = nmsWorld.getChunkAt(chunk.getX(), chunk.getZ());
+        try {
+            boundingBox = nmsChunk.h().get(StructureGenerator.ENDCITY).c();
+        } catch (NullPointerException e) {
+            valid = false;
+            return;
+        }
+
 
         // Cache Values
-        valid = (boolean) isValid.invoke(structureStart);
-        x1 = StructureBoundingBox.getDeclaredField("a").getInt(boundingBox);
-        y1 = StructureBoundingBox.getDeclaredField("b").getInt(boundingBox);
-        z1 = StructureBoundingBox.getDeclaredField("c").getInt(boundingBox);
-        x2 = StructureBoundingBox.getDeclaredField("d").getInt(boundingBox);
-        y2 = StructureBoundingBox.getDeclaredField("e").getInt(boundingBox);
-        z2 = StructureBoundingBox.getDeclaredField("f").getInt(boundingBox);
+        valid = nmsChunk.h().get(StructureGenerator.ENDCITY).e();
+        x1 = boundingBox.a;
+        y1 = boundingBox.b;
+        z1 = boundingBox.c;
+        x2 = boundingBox.d;
+        y2 = boundingBox.e;
+        z2 = boundingBox.f;
     }
 
     public boolean isValid() {

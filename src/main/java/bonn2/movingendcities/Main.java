@@ -17,25 +17,12 @@ public final class Main extends JavaPlugin {
     public static YamlConfiguration citiesYml;
 
     private static File citiesYmlFile;
-    private static Class<?> CraftWorld;
-    private static Class<?> NMSWorld;
-    private static Class<?> NMSChunk;
-    private static Class<?> StructureStart;
-    private static Class<?> StructureBoundingBox;
 
     @Override
     public void onEnable() {
         // Plugin startup logic
         plugin = this;
         pasting = false;
-
-        try {
-            setupNMSClasses();
-        } catch (ClassNotFoundException | ArrayIndexOutOfBoundsException e) {
-            getLogger().warning("Failed to initialize NMS classes!");
-            getServer().getPluginManager().disablePlugin(this);
-            return;
-        }
 
         setupConfig();
 
@@ -67,34 +54,4 @@ public final class Main extends JavaPlugin {
         citiesYml.save(citiesYmlFile);
     }
 
-    private void setupNMSClasses() throws ClassNotFoundException, ArrayIndexOutOfBoundsException {
-        String version;
-        version = Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3];
-
-        CraftWorld = Class.forName("org.bukkit.craftbukkit." + version + ".CraftWorld");
-        NMSWorld = Class.forName("net.minecraft.server." + version + ".World");
-        NMSChunk = Class.forName("net.minecraft.server." + version + ".Chunk");
-        StructureStart = Class.forName("net.minecraft.server." + version + ".StructureStart");
-        StructureBoundingBox = Class.forName("net.minecraft.server." + version + ".StructureBoundingBox");
-    }
-
-    public Class<?> getCraftWorld() {
-        return CraftWorld;
-    }
-
-    public Class<?> getNMSWorld() {
-        return NMSWorld;
-    }
-
-    public Class<?> getNMSChunk() {
-        return NMSChunk;
-    }
-
-    public Class<?> getStructureStart() {
-        return StructureStart;
-    }
-
-    public Class<?> getStructureBoundingBox() {
-        return StructureBoundingBox;
-    }
 }

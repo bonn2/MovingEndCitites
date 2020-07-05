@@ -37,13 +37,8 @@ public class ChunkGenerateListener implements Listener {
             return;
         }
 
-        BoundingBox boundingBox;
-        try {
-            boundingBox = new BoundingBox(chunk);
-        } catch (NoSuchFieldException | InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
-            e.printStackTrace();
-            return;
-        }
+        BoundingBox boundingBox = new BoundingBox(chunk);
+
 
         if (!boundingBox.isValid()) {
             return;
