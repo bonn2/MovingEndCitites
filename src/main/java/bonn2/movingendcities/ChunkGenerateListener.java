@@ -54,6 +54,8 @@ public class ChunkGenerateListener implements Listener {
         int y2 = maxPoint.getY();
         int z2 = maxPoint.getZ();
 
+        plugin.getLogger().info("Removing vanilla city at: " + x2 + " " + y2 + " " + z2);
+
         // List of blocks to remove
         List<Material> removeList = getRemoveList();
 
