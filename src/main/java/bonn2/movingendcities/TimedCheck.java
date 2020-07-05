@@ -56,7 +56,7 @@ public class TimedCheck {
                     Location location = Main.citiesYml.getLocation(key + ".MinLocation");
                     assert location != null;
                     if (location.distance(player.getLocation()) <= 500) {
-                        Main.citiesYml.get(key + ".MostRecentPlayer", new Date());
+                        Main.citiesYml.set(key + ".MostRecentPlayer", new Date());
                         plugin.getLogger().info("Found player near " + key);
                     }
                 }
@@ -150,7 +150,11 @@ public class TimedCheck {
         }
 
         World world = Objects.requireNonNull(Main.citiesYml.getLocation(regen + ".MinLocation")).getWorld();
-        EndCityManager.regenCity(world, regen);
+        if (!regen.equals("")) {
+            EndCityManager.regenCity(world, regen);
+        } else {
+            plugin.getLogger().info("All cities currently in grace period");
+        }
 
         scheduleCheckRegen();
     }
